@@ -3,6 +3,7 @@
 package flags
 
 import (
+	"context"
 	"log"
 	"os"
 	"time"
@@ -37,16 +38,17 @@ func setValueFromEnv(flags *pflag.FlagSet, name string) {
 // sets the default from the environment if possible
 //
 // Used to create backend flags like --skip-links
-func SetDefaultFromEnv(flags *pflag.FlagSet, name string) {
+func SetDefaultFromEnv(ctx context.Context, flags *pflag.FlagSet, name string, opt *fs.Option) {
+	config := fs.GetConfig(ctx)
 	envKey := fs.OptionToEnv(name)
 	envValue, found := os.LookupEnv(envKey)
+
 	if found {
 		flag := flags.Lookup(name)
 		if flag == nil {
 			log.Fatalf("Couldn't find flag --%q", name)
 		}
-		fs.Debugf(nil, "Setting default for %s=%q from environment variable %s", name, envValue, envKey)
-		//err = tempValue.Set()
+		fs.Debugf(nil, "Setting default for %s=%q from environment variable %s", name, config.RedactSensitiveValue(opt, envValue), envKey)
 		flag.DefValue = envValue
 	}
 }

@@ -27,3 +27,7 @@ func TestGetConfig(t *testing.T) {
 	config2ctx := GetConfig(ctx2)
 	assert.Equal(t, config2, config2ctx)
 }
+
+func SetGlobalConfig(config *ConfigInfo) {
+	globalConfig = config
+}

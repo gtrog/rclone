@@ -9,14 +9,32 @@ import (
 )
 
 // A configmap.Getter to read from the environment RCLONE_CONFIG_backend_option_name
-type configEnvVars string
+type configEnvVars struct {
+	configName string
+	fsInfo     *RegInfo
+}
+
+func (cev configEnvVars) getOption(key string) *Option {
+	if cev.fsInfo == nil {
+		return nil
+	}
+	return cev.fsInfo.Options.Get(key)
+}
 
 // Get a config item from the environment variables if possible
-func (configName configEnvVars) Get(key string) (value string, ok bool) {
-	envKey := ConfigToEnv(string(configName), key)
+func (cev configEnvVars) Get(key string) (value string, ok bool) {
+	envKey := ConfigToEnv(cev.configName, key)
 	value, ok = os.LookupEnv(envKey)
+
 	if ok {
-		Debugf(nil, "Setting %s=%q for %q from environment variable %s", key, value, configName, envKey)
+		Debugf(
+			nil,
+			"Setting %s=%q for %q from environment variable %s",
+			key,
+			globalConfig.RedactSensitiveValue(cev.getOption(key), value),
+			cev.configName,
+			envKey,
+		)
 	}
 	return value, ok
 }
@@ -34,14 +52,15 @@ func (oev optionEnvVars) Get(key string) (value string, ok bool) {
 	}
 	envKey := OptionToEnv(oev.fsInfo.Prefix + "-" + key)
 	value, ok = os.LookupEnv(envKey)
+
 	if ok {
-		Debugf(nil, "Setting %s_%s=%q from environment variable %s", oev.fsInfo.Prefix, key, value, envKey)
+		Debugf(nil, "Setting %s_%s=%q from environment variable %s", oev.fsInfo.Prefix, key, globalConfig.RedactSensitiveValue(opt, value), envKey)
 	} else if opt.NoPrefix {
 		// For options with NoPrefix set, check without prefix too
 		envKey := OptionToEnv(key)
 		value, ok = os.LookupEnv(envKey)
 		if ok {
-			Debugf(nil, "Setting %s=%q for %s from environment variable %s", key, value, oev.fsInfo.Prefix, envKey)
+			Debugf(nil, "Setting %s=%q for %s from environment variable %s", key, globalConfig.RedactSensitiveValue(opt, value), oev.fsInfo.Prefix, envKey)
 		}
 	}
 	return value, ok
@@ -112,7 +131,7 @@ func ConfigMap(fsInfo *RegInfo, configName string, connectionStringConfig config
 	}
 
 	// remote specific environment vars
-	config.AddGetter(configEnvVars(configName), configmap.PriorityNormal)
+	config.AddGetter(configEnvVars{configName: configName, fsInfo: fsInfo}, configmap.PriorityNormal)
 
 	// backend specific environment vars
 	if fsInfo != nil {

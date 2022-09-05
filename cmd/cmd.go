@@ -507,7 +507,7 @@ func resolveExitCode(err error) {
 var backendFlags map[string]struct{}
 
 // AddBackendFlags creates flags for all the backend options
-func AddBackendFlags() {
+func AddBackendFlags(ctx context.Context) {
 	backendFlags = map[string]struct{}{}
 	for _, fsInfo := range fs.Registry {
 		done := map[string]struct{}{}
@@ -532,7 +532,7 @@ func AddBackendFlags() {
 					help += " (obscured)"
 				}
 				flag := pflag.CommandLine.VarPF(opt, name, opt.ShortOpt, help)
-				flags.SetDefaultFromEnv(pflag.CommandLine, name)
+				flags.SetDefaultFromEnv(ctx, pflag.CommandLine, name, opt)
 				if _, isBool := opt.Default.(bool); isBool {
 					flag.NoOptDefVal = "true"
 				}
@@ -555,7 +555,7 @@ func Main() {
 		log.Fatalf("Fatal error: %v", err)
 	}
 	setupRootCommand(Root)
-	AddBackendFlags()
+	AddBackendFlags(context.Background())
 	if err := Root.Execute(); err != nil {
 		if strings.HasPrefix(err.Error(), "unknown command") && selfupdateEnabled {
 			Root.PrintErrf("You could use '%s selfupdate' to get latest features.\n\n", Root.CommandPath())

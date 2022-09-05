@@ -136,6 +136,7 @@ type ConfigInfo struct {
 	DisableHTTPKeepAlives   bool
 	Metadata                bool
 	ServerSideAcrossConfigs bool
+	Redacted                bool
 }
 
 // NewConfig creates a new config with everything set to the default
@@ -205,6 +206,18 @@ func (c *ConfigInfo) TimeoutOrInfinite() time.Duration {
 		return c.Timeout
 	}
 	return ModTimeNotSupported
+}
+
+// RedactSensitiveValue will redact a sensitive value if the redacted global flag was passed in
+func (c *ConfigInfo) RedactSensitiveValue(opt *Option, value string) string {
+	if opt == nil {
+		return value
+	}
+
+	if c.Redacted && opt.IsPassword {
+		return "<redacted>"
+	}
+	return value
 }
 
 type configContextKeyType struct{}
